@@ -57,7 +57,7 @@ jobs:
       # sccache caches each crate's compile output, so a release only
       # recompiles what changed, even when Cargo.lock changes.
       SCCACHE_GHA_ENABLED: ${{ matrix.no_sccache && 'false' || 'true' }}
-      RUSTC_WRAPPER: ${{ matrix.no_sccache && '' || 'sccache' }}
+      RUSTC_WRAPPER: ${{ !matrix.no_sccache && 'sccache' || '' }}
       CARGO_INCREMENTAL: "0"
       CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: ${{ matrix.linker || '' }}
     steps:
