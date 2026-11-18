@@ -4,13 +4,20 @@ name: Build and publish
 # updates, and publishes them here with the update feed (latest.json).
 #
 #   gh workflow run release.yml -R selfchat/releases -f tag=v0.1.0
+#
+# Test build of any branch, nothing published:
+#   gh workflow run release.yml -R selfchat/releases -f tag=my-branch -f publish=false
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "selfchat/app tag to build, e.g. v0.1.0"
+        description: "selfchat/app tag to build, e.g. v0.1.0 (or a branch, for a test build)"
         required: true
+      publish:
+        description: "Publish a release. Off: build only, to test."
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -28,6 +35,8 @@ jobs:
           - name: Windows
             runner: windows-latest
             args: ""
+            # LLVM's linker is several times faster than link.exe.
+            linker: rust-lld.exe
           - name: macOS (Apple silicon)
             runner: macos-latest
             args: "--target aarch64-apple-darwin"
@@ -40,6 +49,13 @@ jobs:
             runner: ubuntu-22.04
             args: ""
     runs-on: ${{ matrix.runner }}
+    env:
+      # sccache caches each crate's compile output, so a release only
+      # recompiles what changed, even when Cargo.lock changes.
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: sccache
+      CARGO_INCREMENTAL: "0"
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: ${{ matrix.linker || '' }}
     steps:
       - name: Check out selfchat/app at ${{ inputs.tag }}
         uses: actions/checkout@v4
@@ -59,7 +75,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev libssl-dev
 
       - uses: pnpm/action-setup@v4
         with:
@@ -72,15 +88,32 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      # Downloaded crates and git checkouts; sccache handles compiled output.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app
           key: ${{ matrix.rust_target }}
+          cache-targets: false
 
       - run: pnpm install --frozen-lockfile
         working-directory: app
 
+      - name: Build only (test build)
+        if: ${{ !inputs.publish }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perlin\perl.exe' || 'perl' }}
+        with:
+          projectPath: app
+          args: ${{ matrix.args }}
+
+      - run: sccache --show-stats
+
       - name: Build, sign and upload
+        if: ${{ inputs.publish }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,6 +136,7 @@ jobs:
   publish:
     name: Publish
     needs: build
+    if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     steps:
       - name: Make the release public, so apps see the update
