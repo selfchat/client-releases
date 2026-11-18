@@ -1,0 +1,111 @@
+name: Build and publish
+
+# Builds a tagged version of selfchat/app for every platform, signs the
+# updates, and publishes them here with the update feed (latest.json).
+#
+#   gh workflow run release.yml -R selfchat/releases -f tag=v0.1.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "selfchat/app tag to build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+            args: ""
+          - name: macOS (Apple silicon)
+            runner: macos-latest
+            args: "--target aarch64-apple-darwin"
+            rust_target: aarch64-apple-darwin
+          - name: macOS (Intel)
+            runner: macos-latest
+            args: "--target x86_64-apple-darwin"
+            rust_target: x86_64-apple-darwin
+          - name: Linux
+            runner: ubuntu-22.04
+            args: ""
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out selfchat/app at ${{ inputs.tag }}
+        uses: actions/checkout@v4
+        with:
+          repository: selfchat/app
+          ref: ${{ inputs.tag }}
+          ssh-key: ${{ secrets.APP_DEPLOY_KEY }}
+          path: app
+
+      - name: Read access to selfchat/server (selfchat-proto)
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SERVER_DEPLOY_KEY }}
+      - run: git config --global url."git@github.com:selfchat/server".insteadOf "https://github.com/selfchat/server"
+
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+          key: ${{ matrix.rust_target }}
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: app
+
+      - name: Build, sign and upload
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # OpenSSL (for SQLCipher) is built from source; use Strawberry Perl on Windows.
+          OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perl\bin\perl.exe' || 'perl' }}
+        with:
+          projectPath: app
+          tagName: ${{ inputs.tag }}
+          releaseName: selfchat ${{ inputs.tag }}
+          releaseBody: |
+            Install it, pick a name, and send a friend your link. Already have selfchat? It updates itself.
+
+            See the [README](https://github.com/selfchat/releases#first-launch) for first-launch notes on Windows and Mac.
+          releaseDraft: true
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make the release public, so apps see the update
+        run: gh release edit "${{ inputs.tag }}" -R "${{ github.repository }}" --draft=false --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
