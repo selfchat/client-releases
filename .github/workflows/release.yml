@@ -110,8 +110,6 @@ jobs:
           projectPath: app
           args: ${{ matrix.args }}
 
-      - run: sccache --show-stats
-
       - name: Build, sign and upload
         if: ${{ inputs.publish }}
         uses: tauri-apps/tauri-action@v0
@@ -132,6 +130,10 @@ jobs:
           releaseDraft: true
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+      - name: Compile cache hits
+        if: always()
+        run: sccache --show-stats
 
   publish:
     name: Publish
