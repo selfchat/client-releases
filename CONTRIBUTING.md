@@ -11,8 +11,9 @@ These rules apply to every selfchat repository: **selfchat/app**,
 - Branch from an up-to-date `main`. Name branches after the change, in
   lowercase with hyphens: `personal-node`, `fix-api-types-publish`,
   `status-menu`.
-- Keep branches short-lived: one change per branch, merged within days.
-  Split big work into several pull requests that each leave `main` working.
+- Keep branches short-lived, merged within days. A branch can hold several
+  related changes: one commit per change, in one pull request. Each commit
+  should leave `main` working.
 - **Branches are deleted as soon as they're merged.** GitHub does this
   automatically. Delete your local copy too:
   `git checkout main && git pull && git branch -d <branch>`.
