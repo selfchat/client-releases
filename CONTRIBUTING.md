@@ -1,0 +1,71 @@
+# Working on selfchat
+
+These rules apply to every selfchat repository: **selfchat/app**,
+**selfchat/server** and **selfchat/releases**.
+
+## Branches
+
+- `main` is always releasable. Nothing is pushed to it directly; every
+  change goes through a pull request. Releases are the only exception
+  (`pnpm release` commits the version bump and tags it).
+- Branch from an up-to-date `main`. Name branches after the change, in
+  lowercase with hyphens: `personal-node`, `fix-api-types-publish`,
+  `status-menu`.
+- Keep branches short-lived: one change per branch, merged within days.
+  Split big work into several pull requests that each leave `main` working.
+- **Branches are deleted as soon as they're merged.** GitHub does this
+  automatically. Delete your local copy too:
+  `git checkout main && git pull && git branch -d <branch>`.
+- **Abandoned branches are removed weekly.** A scheduled job
+  (`.github/workflows/stale-branches.yml`) deletes any branch with no commits
+  for 30 days and no open pull request. To keep one, open a draft pull
+  request for it.
+- Tags are permanent: never delete or move a pushed tag.
+
+## Pull requests
+
+- Merges are **squash merges only**, so `main` gets one commit per pull
+  request. The commit uses the pull request's title and description, so
+  write both for someone reading `git log` later.
+- Title: what changes, in plain words ("Short friend links", "Fix
+  publishing @selfchat/server-api").
+- Description: what changed and why, how it was tested, and what's left
+  out. Close issues with `Closes #12`, one per line.
+- Merge only when CI passes. If a check fails, fix it on the branch;
+  don't merge around it.
+- Work that needs the other repository: protocol changes land in
+  selfchat/server first (see below). Link the pull requests to each other.
+
+## Protocol changes
+
+`selfchat-proto` lives in selfchat/server and the app pins it by tag.
+
+1. Change `selfchat-proto` in a selfchat/server pull request and bump the
+   workspace version (`0.4.0` → `0.5.0` for a breaking change).
+2. Merge it, then tag `main`: `git tag -a v0.5.0 -m "selfchat-proto v0.5.0"`.
+3. In selfchat/app, point `selfchat-proto` at the new tag in a pull request.
+
+While both sides change together, the app may use
+`{ path = "../selfchat-server/crates/selfchat-proto" }` locally, but never
+merge a path dependency.
+
+## Releases
+
+- Desktop app: from an up-to-date `main` in selfchat/app, run
+  `pnpm release X.Y.Z`. It bumps the version, tags `vX.Y.Z` and starts the
+  build in selfchat/releases, which publishes the installers and the
+  signed update feed.
+- Test the build pipeline without publishing:
+  `gh workflow run release.yml -R selfchat/releases -f tag=<branch> -f publish=false`.
+- Never install or uninstall selfchat builds on a machine where someone
+  uses selfchat for real. Installs share one folder, so a test install
+  replaces theirs. Test on CI or a spare machine.
+
+## Writing
+
+- Plain words, in the app and in commits, pull requests, issues and
+  release notes.
+- Don't name other products. Describe the behaviour instead
+  ("downloads in the background; click Restart to update").
+- Keep secrets out of repositories: signing keys and deploy keys live in
+  GitHub secrets.
