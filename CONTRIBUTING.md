@@ -52,10 +52,16 @@ merge a path dependency.
 
 ## Releases
 
-- Desktop app: from an up-to-date `main` in selfchat/app, run
-  `pnpm release X.Y.Z`. It bumps the version, tags `vX.Y.Z` and starts the
-  build in selfchat/releases, which publishes the installers and the
-  signed update feed.
+- Desktop app: **merging a pull request into `main` in selfchat/app
+  releases it.** The version goes up one patch (label the pull request
+  `release:minor` or `release:major` for more, or `no-release` to skip),
+  `main` is tagged, and the build in selfchat/releases publishes the
+  installers, the signed update feed and the release notes.
+- Release notes come from the pull request's `## Release notes` section:
+  short bullets, in plain words, for people who use the app. Without the
+  section, the pull request's title is used.
+- By hand, without a pull request: `pnpm release X.Y.Z` from an
+  up-to-date `main`.
 - Test the build pipeline without publishing:
   `gh workflow run release.yml -R selfchat/releases -f tag=<branch> -f publish=false`.
 - Never install or uninstall selfchat builds on a machine where someone
