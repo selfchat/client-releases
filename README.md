@@ -8,8 +8,7 @@ no phone number and no server in the middle.
 | Your computer | Download |
 | --- | --- |
 | Windows 10 or 11 | `selfchat_x.y.z_x64-setup.exe` |
-| Mac with Apple silicon (M1 and later) | `selfchat_x.y.z_aarch64.dmg` |
-| Mac with Intel | `selfchat_x.y.z_x64.dmg` |
+| Mac (Apple silicon or Intel) | `selfchat_x.y.z_universal.dmg` |
 | Linux | `selfchat_x.y.z_amd64.AppImage`, or the `.deb` |
 
 Once installed, selfchat updates itself. Every update is signed, and the app

@@ -41,14 +41,12 @@ jobs:
             # refuses ("filename or extension is too long"); use the
             # target cache there instead.
             no_sccache: true
-          - name: macOS (Apple silicon)
+          # One universal app for Apple silicon and Intel Macs: one Mac
+          # runner instead of two (they're GitHub's scarcest machines).
+          - name: macOS
             runner: macos-latest
-            args: "--target aarch64-apple-darwin"
-            rust_target: aarch64-apple-darwin
-          - name: macOS (Intel)
-            runner: macos-latest
-            args: "--target x86_64-apple-darwin"
-            rust_target: x86_64-apple-darwin
+            args: "--target universal-apple-darwin"
+            rust_target: aarch64-apple-darwin,x86_64-apple-darwin
           - name: Linux
             runner: ubuntu-22.04
             args: ""
