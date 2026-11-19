@@ -3,6 +3,24 @@
 These rules apply to every selfchat repository: **selfchat/app**,
 **selfchat/server** and **selfchat/releases**.
 
+## Picking up work
+
+The roadmap is GitHub milestones called phases (Phase 3: Calls, Phase 4:
+Everyday messaging, and so on), with the same names in selfchat/app and
+selfchat/server. Each issue sits in the phase that needs it.
+
+- **Assign yourself before you start.** That's how others know it's taken.
+  If someone is already assigned, ask them first.
+- **Open a draft pull request early**, with `Closes #12` in the description.
+  It shows the work is under way and links it to the issue. Mark it ready
+  for review when it's done.
+- **Stopping?** Unassign yourself and leave a comment on the issue saying
+  where you got to, so someone else can carry on.
+- **No issue yet?** Open one in the right phase first, unless it's a quick
+  fix.
+- To see who's doing what, open the phase's milestone: each open issue
+  shows who it's assigned to.
+
 ## Branches
 
 - `main` is always releasable. Nothing is pushed to it directly; every
