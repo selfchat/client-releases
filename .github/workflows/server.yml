@@ -100,7 +100,7 @@ jobs:
           merge-multiple: true
       - name: Gather the installer and deploy files
         run: |
-          cp server/deploy/install.sh server/deploy/selfchat.service server/deploy/docker-compose.yml server/deploy/Caddyfile out/
+          cp server/deploy/install.sh server/deploy/selfchat.service server/deploy/docker-compose.yml out/
           (cd out && sha256sum install.sh > install.sh.sha256)
           ls -l out
       - name: Create the release
