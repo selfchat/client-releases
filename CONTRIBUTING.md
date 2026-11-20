@@ -1,12 +1,14 @@
 # Working on selfchat
 
-These rules apply to every selfchat repository: **selfchat/app**,
-**selfchat/server** and **selfchat/releases**.
+These rules apply to every selfchat repository: **selfchat/client** (the
+app), **selfchat/server**, **selfchat/client-releases** (where the app is
+built and published) and **selfchat/server-releases** (where selfchat-server
+and its Docker image are built and published).
 
 ## Picking up work
 
 The roadmap is GitHub milestones called phases (Phase 3: Calls, Phase 4:
-Everyday messaging, and so on), with the same names in selfchat/app and
+Everyday messaging, and so on), with the same names in selfchat/client and
 selfchat/server. Each issue sits in the phase that needs it.
 
 - **Assign yourself before you start.** That's how others know it's taken.
@@ -62,7 +64,7 @@ selfchat/server. Each issue sits in the phase that needs it.
 1. Change `selfchat-proto` in a selfchat/server pull request and bump the
    workspace version (`0.4.0` → `0.5.0` for a breaking change).
 2. Merge it, then tag `main`: `git tag -a v0.5.0 -m "selfchat-proto v0.5.0"`.
-3. In selfchat/app, point `selfchat-proto` at the new tag in a pull request.
+3. In selfchat/client, point `selfchat-proto` at the new tag in a pull request.
 
 While both sides change together, the app may use
 `{ path = "../selfchat-server/crates/selfchat-proto" }` locally, but never
@@ -70,10 +72,10 @@ merge a path dependency.
 
 ## Releases
 
-- Desktop app: **merging a pull request into `main` in selfchat/app
+- Desktop app: **merging a pull request into `main` in selfchat/client
   releases it.** The version goes up one patch (label the pull request
   `release:minor` or `release:major` for more, or `no-release` to skip),
-  `main` is tagged, and the build in selfchat/releases publishes the
+  `main` is tagged, and the build in selfchat/client-releases publishes the
   installers, the signed update feed and the release notes.
 - Release notes come from the pull request's `## Release notes` section:
   short bullets, in plain words, for people who use the app. Without the
@@ -81,7 +83,7 @@ merge a path dependency.
 - By hand, without a pull request: `pnpm release X.Y.Z` from an
   up-to-date `main`.
 - Test the build pipeline without publishing:
-  `gh workflow run release.yml -R selfchat/releases -f tag=<branch> -f publish=false`.
+  `gh workflow run release.yml -R selfchat/client-releases -f tag=<branch> -f publish=false`.
 - Never install or uninstall selfchat builds on a machine where someone
   uses selfchat for real. Installs share one folder, so a test install
   replaces theirs. Test on CI or a spare machine.
