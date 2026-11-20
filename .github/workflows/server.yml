@@ -6,7 +6,8 @@ name: Server release
 # each of its vX.Y.Z tags. That push starts this workflow, which builds
 # that version from source and publishes a server-vX.Y.Z release with
 # static Linux binaries (x86-64 and ARM64), the installer and the deploy
-# files, and the setup guide (docs/setup.md) as its notes.
+# files, and the setup guide (docs/setup.md) as its notes, and the
+# multi-arch Docker image ghcr.io/selfchat/server.
 #
 # To publish an existing version by hand: run this workflow with the tag,
 # e.g. server-v0.11.0.
@@ -120,3 +121,57 @@ jobs:
               --notes-file server/docs/setup.md \
               --latest=false
           fi
+
+  # Multi-arch image from the same binaries: ghcr.io/selfchat/server:X.Y.Z,
+  # and :latest when this is the newest server release. The package must
+  # give this repository write access (package settings, Manage Actions
+  # access).
+  docker:
+    name: Docker image
+    needs: [version, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: selfchat/server
+          ref: ${{ needs.version.outputs.ref }}
+          ssh-key: ${{ secrets.SERVER_DEPLOY_KEY }}
+          path: server
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: server/deploy/bin
+          merge-multiple: true
+      - name: Image tags
+        id: tags
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          version="v${TAG#server-v}"
+          tags="ghcr.io/selfchat/server:$version"
+          # :latest only for the newest server-v* tag, so publishing an
+          # older version again doesn't move it back.
+          newest=$(git ls-remote --tags --refs "https://github.com/$GITHUB_REPOSITORY" 'server-v*' \
+            | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+          if [ "$newest" = "$TAG" ]; then
+            tags="$tags,ghcr.io/selfchat/server:latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "Publishing $tags"
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: server/deploy
+          file: server/deploy/Dockerfile.release
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
