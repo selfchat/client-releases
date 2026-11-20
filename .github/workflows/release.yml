@@ -1,17 +1,17 @@
 name: Build and publish
 
-# Builds a tagged version of selfchat/app for every platform, signs the
+# Builds a tagged version of selfchat/client for every platform, signs the
 # updates, and publishes them here with the update feed (latest.json).
 #
-# Normally automatic: merging a pull request in selfchat/app bumps the
+# Normally automatic: merging a pull request in selfchat/client bumps the
 # version, tags it, and pushes the same tag here, with the release notes as
 # the tag's message. That push starts this workflow.
 #
 # By hand:
-#   gh workflow run release.yml -R selfchat/releases -f tag=v0.1.0
+#   gh workflow run release.yml -R selfchat/client-releases -f tag=v0.1.0
 #
 # Test build of any branch, nothing published:
-#   gh workflow run release.yml -R selfchat/releases -f tag=my-branch -f publish=false
+#   gh workflow run release.yml -R selfchat/client-releases -f tag=my-branch -f publish=false
 
 on:
   push:
@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "selfchat/app tag to build, e.g. v0.1.0 (or a branch, for a test build)"
+        description: "selfchat/client tag to build, e.g. v0.1.0 (or a branch, for a test build)"
         required: true
       publish:
         description: "Publish a release. Off: build only, to test."
@@ -30,7 +30,7 @@ permissions:
   contents: write
 
 env:
-  # The selfchat/app tag to build: pushed here, or typed in.
+  # The selfchat/client tag to build: pushed here, or typed in.
   TAG: ${{ inputs.tag || github.ref_name }}
 
 concurrency:
@@ -70,10 +70,10 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: ${{ matrix.linker || '' }}
     steps:
-      - name: Check out selfchat/app at ${{ env.TAG }}
+      - name: Check out selfchat/client at ${{ env.TAG }}
         uses: actions/checkout@v4
         with:
-          repository: selfchat/app
+          repository: selfchat/client
           ref: ${{ env.TAG }}
           ssh-key: ${{ secrets.APP_DEPLOY_KEY }}
           path: app
@@ -140,7 +140,7 @@ jobs:
           releaseBody: |
             Install it, pick a name, and send a friend your link. Already have selfchat? It updates itself.
 
-            See the [README](https://github.com/selfchat/releases#first-launch) for first-launch notes on Windows and Mac.
+            See the [README](https://github.com/selfchat/client-releases#first-launch) for first-launch notes on Windows and Mac.
           releaseDraft: true
           includeUpdaterJson: true
           args: ${{ matrix.args }}
@@ -167,7 +167,7 @@ jobs:
             {
               echo
               echo "---"
-              echo "Already have selfchat? It updates itself. New here? See the [README](https://github.com/selfchat/releases#first-launch) for first-launch notes on Windows and Mac."
+              echo "Already have selfchat? It updates itself. New here? See the [README](https://github.com/selfchat/client-releases#first-launch) for first-launch notes on Windows and Mac."
             } >> notes.md
             gh release edit "$TAG" -R "$REPO" --notes-file notes.md
           fi

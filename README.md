@@ -3,7 +3,7 @@
 Private messages with your friends, end-to-end encrypted, with no account,
 no phone number and no server in the middle.
 
-**[Download the latest version](https://github.com/selfchat/releases/releases/latest)**
+**[Download the latest version](https://github.com/selfchat/client-releases/releases/latest)**
 
 | Your computer | Download |
 | --- | --- |
