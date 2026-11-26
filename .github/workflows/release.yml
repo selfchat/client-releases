@@ -78,15 +78,16 @@ jobs:
           ssh-key: ${{ secrets.APP_DEPLOY_KEY }}
           path: app
 
-      # Read access to the private selfchat/server (selfchat-mailbox) and
-      # selfchat/proto (selfchat-proto). A deploy key opens one repository,
-      # so each gets its own host name in an SSH config, and cargo fetches
-      # through git.
-      - name: Read access to selfchat/server and selfchat/proto
+      # Read access to the private selfchat/server (selfchat-mailbox),
+      # selfchat/proto (selfchat-proto) and selfchat/gif-relay (selfchat-gifs).
+      # A deploy key opens one repository, so each gets its own host name in
+      # an SSH config, and cargo fetches through git.
+      - name: Read access to selfchat/server, selfchat/proto and selfchat/gif-relay
         shell: bash
         env:
           SERVER_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
           PROTO_KEY: ${{ secrets.PROTO_DEPLOY_KEY }}
+          GIF_RELAY_KEY: ${{ secrets.GIF_RELAY_DEPLOY_KEY }}
         run: |
           umask 077
           tmp="$RUNNER_TEMP"
@@ -95,15 +96,17 @@ jobs:
           mkdir -p "$dir"
           printf '%s\n' "$SERVER_KEY" > "$dir/server"
           printf '%s\n' "$PROTO_KEY" > "$dir/proto"
+          printf '%s\n' "$GIF_RELAY_KEY" > "$dir/gif-relay"
           # GitHub's published SSH host key.
           echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$dir/known_hosts"
-          for repo in server proto; do
+          for repo in server proto gif-relay; do
             printf 'Host github-%s\n  HostName github.com\n  User git\n  IdentityFile %s/%s\n  IdentitiesOnly yes\n  UserKnownHostsFile %s/known_hosts\n  HostKeyAlias github.com\n  StrictHostKeyChecking yes\n' "$repo" "$dir" "$repo" "$dir" >> "$dir/config"
           done
           echo "GIT_SSH_COMMAND=ssh -F $dir/config" >> "$GITHUB_ENV"
           echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
           git config --global url."git@github-server:selfchat/server".insteadOf "https://github.com/selfchat/server"
           git config --global url."git@github-proto:selfchat/proto".insteadOf "https://github.com/selfchat/proto"
+          git config --global url."git@github-gif-relay:selfchat/gif-relay".insteadOf "https://github.com/selfchat/gif-relay"
 
       - name: Linux packages
         if: runner.os == 'Linux'
@@ -141,9 +144,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perl\bin\perl.exe' || 'perl' }}
-          # A GIF key built into the app, so GIFs work without setting one up.
-          # With no secret, it's empty and left out.
-          SELFCHAT_KLIPY_KEY: ${{ secrets.SELFCHAT_KLIPY_KEY }}
         with:
           projectPath: app
           args: ${{ matrix.args }}
@@ -157,9 +157,6 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # OpenSSL (for SQLCipher) is built from source; use Strawberry Perl on Windows.
           OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perl\bin\perl.exe' || 'perl' }}
-          # A GIF key built into the app, so GIFs work without setting one up.
-          # With no secret, it's empty and left out.
-          SELFCHAT_KLIPY_KEY: ${{ secrets.SELFCHAT_KLIPY_KEY }}
         with:
           projectPath: app
           tagName: ${{ env.TAG }}
