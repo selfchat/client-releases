@@ -120,6 +120,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perl\bin\perl.exe' || 'perl' }}
+          # A GIF key built into the app, so GIFs work without setting one up.
+          # With no secret, it's empty and left out.
+          SELFCHAT_KLIPY_KEY: ${{ secrets.SELFCHAT_KLIPY_KEY }}
         with:
           projectPath: app
           args: ${{ matrix.args }}
@@ -133,6 +136,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # OpenSSL (for SQLCipher) is built from source; use Strawberry Perl on Windows.
           OPENSSL_SRC_PERL: ${{ runner.os == 'Windows' && 'C:\Strawberry\perl\bin\perl.exe' || 'perl' }}
+          # A GIF key built into the app, so GIFs work without setting one up.
+          # With no secret, it's empty and left out.
+          SELFCHAT_KLIPY_KEY: ${{ secrets.SELFCHAT_KLIPY_KEY }}
         with:
           projectPath: app
           tagName: ${{ env.TAG }}
