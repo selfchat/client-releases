@@ -78,11 +78,42 @@ jobs:
           ssh-key: ${{ secrets.APP_DEPLOY_KEY }}
           path: app
 
-      - name: Read access to selfchat/server (selfchat-proto)
-        uses: webfactory/ssh-agent@v0.9.1
-        with:
-          ssh-private-key: ${{ secrets.SERVER_DEPLOY_KEY }}
-      - run: git config --global url."git@github.com:selfchat/server".insteadOf "https://github.com/selfchat/server"
+      # Read access to the private selfchat/server (selfchat-mailbox) and
+      # selfchat/proto (selfchat-proto). A deploy key opens one repository,
+      # so each gets its own host name in an SSH config, and cargo fetches
+      # through git.
+      - name: Read access to selfchat/server and selfchat/proto
+        shell: bash
+        env:
+          SERVER_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
+          PROTO_KEY: ${{ secrets.PROTO_DEPLOY_KEY }}
+        run: |
+          umask 077
+          tmp="$RUNNER_TEMP"
+          command -v cygpath >/dev/null && tmp="$(cygpath -m "$RUNNER_TEMP")"
+          dir="$tmp/private-ssh"
+          mkdir -p "$dir"
+          printf '%s
+' "$SERVER_KEY" > "$dir/server"
+          printf '%s
+' "$PROTO_KEY" > "$dir/proto"
+          # GitHub's published SSH host key.
+          echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$dir/known_hosts"
+          for repo in server proto; do
+            printf 'Host github-%s
+  HostName github.com
+  User git
+  IdentityFile %s/%s
+  IdentitiesOnly yes
+  UserKnownHostsFile %s/known_hosts
+  HostKeyAlias github.com
+  StrictHostKeyChecking yes
+' "$repo" "$dir" "$repo" "$dir" >> "$dir/config"
+          done
+          echo "GIT_SSH_COMMAND=ssh -F $dir/config" >> "$GITHUB_ENV"
+          echo "CARGO_NET_GIT_FETCH_WITH_CLI=true" >> "$GITHUB_ENV"
+          git config --global url."git@github-server:selfchat/server".insteadOf "https://github.com/selfchat/server"
+          git config --global url."git@github-proto:selfchat/proto".insteadOf "https://github.com/selfchat/proto"
 
       - name: Linux packages
         if: runner.os == 'Linux'
